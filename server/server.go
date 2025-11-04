@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/yosida95/uritemplate/v3"
 )
 
 // resourceEntry holds both a resource and its handler
@@ -1019,10 +1020,7 @@ func (s *MCPServer) handleReadResource(
 					matched = true
 					matchedVars := serverTemplate.Template.URITemplate.Match(request.Params.URI)
 					// Convert matched variables to a map
-					request.Params.Arguments = make(map[string]any, len(matchedVars))
-					for name, value := range matchedVars {
-						request.Params.Arguments[name] = value.V
-					}
+					request.Params.Arguments = resourceValuesToArguments(matchedVars)
 					break
 				}
 			}
@@ -1041,10 +1039,7 @@ func (s *MCPServer) handleReadResource(
 				matched = true
 				matchedVars := template.URITemplate.Match(request.Params.URI)
 				// Convert matched variables to a map
-				request.Params.Arguments = make(map[string]any, len(matchedVars))
-				for name, value := range matchedVars {
-					request.Params.Arguments[name] = value.V
-				}
+				request.Params.Arguments = resourceValuesToArguments(matchedVars)
 				break
 			}
 		}
@@ -1087,6 +1082,33 @@ func (s *MCPServer) handleReadResource(
 // matchesTemplate checks if a URI matches a URI template pattern
 func matchesTemplate(uri string, template *mcp.URITemplate) bool {
 	return template.Regexp().MatchString(uri)
+}
+
+func resourceValuesToArguments(values uritemplate.Values) map[string]any {
+	arguments := make(map[string]any, len(values))
+	for name, value := range values {
+		// in uri, default to empty string
+		arguments[name] = ""
+		switch value.T {
+		case uritemplate.ValueTypeString:
+			if v := value.String(); v != "" {
+				arguments[name] = v
+			}
+		case uritemplate.ValueTypeList:
+			if v := value.List(); len(v) > 0 {
+				arguments[name] = v
+			}
+		case uritemplate.ValueTypeKV:
+			if v := value.KV(); len(v) > 0 {
+				vals := make(map[string]string, len(v)/2)
+				for i := 0; i < len(v); i += 2 {
+					vals[v[i]] = v[i+1]
+				}
+				arguments[name] = vals
+			}
+		}
+	}
+	return arguments
 }
 
 func (s *MCPServer) handleListPrompts(
