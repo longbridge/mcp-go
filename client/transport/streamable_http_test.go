@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/stretchr/testify/require"
 )
 
 // startMockStreamableHTTPServer starts a test HTTP server that implements
@@ -535,9 +536,7 @@ func TestStreamableHTTP(t *testing.T) {
 			t.Fatalf("SendRequest failed: %v", err)
 		}
 
-		if response == nil {
-			t.Fatal("Expected response, got nil")
-		}
+		require.NotNil(t, response, "Expected response, got nil")
 
 		// Verify the response
 		var result string
